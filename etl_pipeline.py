@@ -1,6 +1,8 @@
 import polars as pl
 import polars.selectors as cs
 from polars import col
+import duckdb
+
 
 ##### Extract #####
 URL_PATH = "https://s3.sa-east-1.amazonaws.com/ckan.saude.gov.br/SRAG/2024/INFLUD24-26-06-2025.parquet"
@@ -39,6 +41,8 @@ df_unduplicated = df_typed.unique("nu_notific")
 
 df_sanitized = df_unduplicated.with_columns(cs.string().str.strip_chars().str.to_lowercase())
 
+df_final = df_sanitized.filter(pl.col("hospital") == True)
+
 ## Structuring & Modeling
 
 ### Todo...
@@ -49,4 +53,9 @@ df_sanitized = df_unduplicated.with_columns(cs.string().str.strip_chars().str.to
 
 ##### Load #####
 
-### Todo...
+DB_PATH = "data/srag.duckdb"
+
+con = duckdb.connect(database=DB_PATH)
+con.register('temp_srag', df_final) 
+con.execute("CREATE OR REPLACE TABLE srag AS SELECT * FROM temp_srag")
+con.close()
