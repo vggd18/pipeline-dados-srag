@@ -67,14 +67,14 @@ classi_fin_map = {
 col_names = df_lazy.collect_schema().names()
 df_final_lazy = df_lazy.rename({ col: col.lower() for col in col_names}) \
   .with_columns([
-    (cs.starts_with("dt_") | cs.starts_with("dose_") | cs.starts_with("dos_")).str.to_datetime().dt.date(),
+    (cs.starts_with("dt_") | cs.starts_with("dose_") | cs.starts_with("dos_")).str.to_datetime(strict=False).dt.date(),
     (cs.starts_with("sg_") | cs.starts_with("fab_")).cast(pl.Categorical),
-    pl.col("cs_sexo").replace(sexo_map, default=None).cast(pl.Categorical),
-    pl.col("cs_raca").replace(raca_map, default=None).cast(pl.Categorical),
-    pl.col("cs_escol_n").replace(escolaridade_map, default=None).cast(pl.Categorical),
-    pl.col("evolucao").replace(evolucao_map, default=None).cast(pl.Categorical),
-    pl.col("classi_fin").replace(classi_fin_map, default=None).cast(pl.Categorical),
-    pl.col("nu_idade_n").cast(pl.Int32),
+    pl.col("cs_sexo").replace_strict(sexo_map, default=None).cast(pl.Categorical),
+    pl.col("cs_raca").replace_strict(raca_map, default=None).cast(pl.Categorical),
+    pl.col("cs_escol_n").replace_strict(escolaridade_map, default=None).cast(pl.Categorical),
+    pl.col("evolucao").replace_strict(evolucao_map, default=None).cast(pl.Categorical),
+    pl.col("classi_fin").replace_strict(classi_fin_map, default=None).cast(pl.Categorical),
+    pl.col("nu_idade_n").cast(pl.Int32, strict=False),
     pl.col(float_columns).cast(pl.Float64, strict=False),
     *[pl.when(pl.col(col_name) == "1").then(True)
         .when(pl.col(col_name) == "2").then(False)
