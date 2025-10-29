@@ -3,10 +3,13 @@ import polars.selectors as cs
 import duckdb
 import os
 import logging
+from dotenv import load_dotenv
 
-URL_PATH = "https://s3.sa-east-1.amazonaws.com/ckan.saude.gov.br/SRAG/2024/INFLUD24-26-06-2025.parquet"
-DB_DIR = "data"
-DB_PATH = "data/srag.duckdb"
+load_dotenv()
+
+URL_PATH = os.getenv("SOURCE_URL")
+DB_DIR = os.getenv("OUTPUT_DIR")
+DB_PATH = os.getenv("DB_PATH")
 
 def extract(url: str) -> pl.LazyFrame:
   """
@@ -162,4 +165,8 @@ def main():
     logging.critical(f"Pipeline falhou. Erro: {e}", exc_info=True)
 
 if __name__ == "__main__":
+  if not URL_PATH or not DB_PATH:
+    logging.critical("Erro: Variáveis SOURCE_URL ou DB_PATH não encontradas no .env ou ambiente.")
+    exit(1)
+
   main()

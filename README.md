@@ -38,13 +38,19 @@ Juntos, eles se comunicam via **Apache Arrow** (`pyarrow`), permitindo transfer�
     pip install -r requirements.txt
     ```
 
-3.  Execute o pipeline ETL completo:
+3.  **Configuração:** Copie o arquivo de configuração de exemplo para criar seu arquivo `.env` local:
+    ```bash
+    cp .env.example .env
+    ```
+    *(Os valores padrão no `.env` devem funcionar para este desafio, mas você pode editá-los se necessário).*
+
+4.  Execute o pipeline ETL completo:
     ```bash
     python etl_pipeline.py
     ```
     O script irá (1) baixar os dados, (2) processá-los em modo *Lazy* e (3) carregar o resultado no arquivo `data/srag.duckdb`.
 
-4.  (Opcional) Verifique o banco de dados via CLI:
+5.  (Opcional) Verifique o banco de dados via CLI:
     ```bash
     duckdb data/srag.duckdb
     ```
