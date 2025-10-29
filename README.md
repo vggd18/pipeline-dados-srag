@@ -56,6 +56,8 @@ Juntos, eles se comunicam via **Apache Arrow** (`pyarrow`), permitindo transfer�
 
 Esta seção cumpre o requisito de "breve relatório" do processo seletivo.
 
+**Nota sobre a Implementação:** O pipeline foi implementado seguindo boas práticas de engenharia, como a separação de responsabilidades em funções (`extract`, `transform`, `load`), o uso do módulo `logging` para rastreabilidade e a otimização de memória através do "Lazy Mode" do Polars.
+
 ### 1. Dados
 
 * **Descrição dos Dados:** Os dados escolhidos foram os registros de Síndrome Respiratória Aguda Grave (SRAG) **hospitalizados**, disponibilizados pelo Ministério da Saúde via OpenDataSUS.
