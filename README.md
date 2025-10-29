@@ -27,7 +27,7 @@ Juntos, eles se comunicam via **Apache Arrow** (`pyarrow`), permitindo transfer�
 
 1.  Clone este repositório:
     ```bash
-    git clone [https://github.com/vggd18/pipeline-dados-srag.git](https://github.com/vggd18/pipeline-dados-srag.git)
+    git clone https://github.com/vggd18/pipeline-dados-srag.git
     cd pipeline-dados-srag
     ```
 
@@ -77,7 +77,7 @@ Esta seção cumpre o requisito de "breve relatório" do processo seletivo.
 * **Fonte(s) de Dados:**
     * [Página de Recursos (OpenDataSUS)](https://opendatasus.saude.gov.br/dataset/srag-2021-a-2024): Página principal do dataset SRAG.
     * [Arquivo de Dados (Parquet 2024)](https://opendatasus.saude.gov.br/gl/dataset/srag-2021-a-2024/resource/0df883b2-4c71-4e7d-ab77-1767e6b956c5): Link direto para o arquivo `.parquet` de 2024 utilizado neste projeto.
-    * [Dicionário de Dados (PDF)](https://opendatasus.saude.gov.br/dataset/39a4995f-4a6e-440f-8c8f-b00c81fae0d0/resource/3135ac9c-2019-4a89-a893-2ed50ebd8e68/download/dicionario-de-dados-2019-a-2025.pdf): Documento oficial descrevendo todas as colunas do dataset.
+    * [Dicionário de Dados (PDF)](https://opendatasus.saude.gov.br/dataset/srag-2021-a-2024/resource/3135ac9c-2019-4989-a893-2ed50ebd8e68): Documento oficial descrevendo todas as colunas do dataset.
 * **Justificativa da Escolha:**
     1.  **Relevância:** Sendo a vaga para a Secretaria de Saúde do Recife, utilizar dados de saúde pública (SRAG) é diretamente relevante para o domínio da organização.
     2.  **Escopo:** Conforme a orientação do desafio de focar em "qualidade" , optei por utilizar apenas os dados de 2024. Este escopo (+250.000 registros) é robusto o suficiente para provar a eficiência do pipeline (especialmente a otimização de memória) sem adicionar complexidade desnecessária.
@@ -96,6 +96,7 @@ O pipeline foi construído usando o **"Lazy Mode"** (modo preguiçoso) do Polars
     5.  **Sanitização:** Todas as colunas `String` restantes (como `co_mun_res`) foram sanitizadas (`.str.strip_chars().str.to_lowercase()`) para padronizar o case e remover espaços.
     6.  **Deduplicação:** Os registros foram deduplicados pela chave primária `nu_notific`.
     7.  **Filtragem de Integridade:** O dataset foi filtrado para `hospital = True`, alinhando os dados com a definição oficial de "casos hospitalizados".
+    8.  **Filtragem de Colunas por Nulidade (com Trade-off):** Como etapa final da transformação, foi implementada uma lógica para remover colunas com mais de 70% de valores nulos. No entanto, foi feito um **trade-off estratégico**: colunas consideradas de alta importância analítica (especificamente `puerpera`, `hematologi`, `sind_down`, `hepatica`, `renal`, `obesidade`), mesmo que acima do threshold de 70%, foram **explicitamente mantidas** no dataset final. Essa decisão prioriza a retenção de informações potencialmente valiosas para a análise de comorbidades, balanceando a limpeza de dados com as necessidades do negócio.
 
 * **Carregamento (L):** O carregamento no DuckDB é feito de forma nativa e otimizada:
     1.  O plano "Lazy" do Polars (`df_final_lazy`) é "registrado" no DuckDB (`con.register()`).

@@ -1,11 +1,9 @@
 import polars as pl
 import polars.selectors as cs
-from polars import col
 import duckdb
 import os
 import logging
 
-##### Extract #####
 URL_PATH = "https://s3.sa-east-1.amazonaws.com/ckan.saude.gov.br/SRAG/2024/INFLUD24-26-06-2025.parquet"
 DB_DIR = "data"
 DB_PATH = "data/srag.duckdb"
@@ -52,9 +50,10 @@ def transform(df_lazy: pl.LazyFrame) -> pl.LazyFrame:
 
   ##### Lógica da Transformação #####
   col_names = df_lazy.collect_schema().names()
-  df_final_lazy = df_lazy.rename({ col: col.lower() for col in col_names}) \
+  df_transformed_lazy = df_lazy.rename({ col: col.lower() for col in col_names}) \
     .with_columns([
-      (cs.starts_with("dt_") | cs.starts_with("dose_") | cs.starts_with("dos_")).str.to_datetime(strict=False).dt.date(),
+      (cs.starts_with("dt_") | cs.starts_with("dose_") | cs.starts_with("dos_")) \
+        .str.to_datetime(strict=False).dt.date(),
       (cs.starts_with("sg_") | cs.starts_with("fab_")).cast(pl.Categorical),
       pl.col("cs_sexo").replace_strict(sexo_map, default=None).cast(pl.Categorical),
       pl.col("cs_raca").replace_strict(raca_map, default=None).cast(pl.Categorical),
@@ -71,10 +70,53 @@ def transform(df_lazy: pl.LazyFrame) -> pl.LazyFrame:
     .unique("nu_notific") \
     .with_columns(cs.string().str.strip_chars().str.to_lowercase()) \
     .filter(pl.col("hospital") == True)
+  
+  df_lazy_columns = filter_columns_by_nullity(df_transformed_lazy, threshold=70.0)
+
+  df_final_lazy= df_transformed_lazy.select(df_lazy_columns)
 
   logging.info("Transformações aplicadas.")
 
   return df_final_lazy
+
+
+def filter_columns_by_nullity(df_transformed_lazy: pl.LazyFrame, threshold: float = 70.0) -> list[str]:
+  """
+  Calcula nulidade e retorna a lista de colunas a serem mantidas.
+  """
+  logging.info(f"Identificando colunas com mais de {threshold}% de nulos...")
+  
+  stats = df_transformed_lazy.select([
+    pl.all().is_null().sum(),
+    pl.len().alias("__total_rows__")
+  ]).collect()
+  
+  total_rows = stats["__total_rows__"][0]
+  categorical_columns_to_keep = ['puerpera','hematologi','sind_down','hepatica','renal','obesidade']
+  
+  cols_to_keep = []
+  cols_dropped = []
+
+  if total_rows > 0:
+    for col_name in df_transformed_lazy.columns:
+      if col_name in categorical_columns_to_keep:
+        cols_to_keep.append(col_name)
+      elif col_name != "__total_rows__": 
+        null_count = stats[col_name][0]
+        null_percentage = (null_count / total_rows) * 100
+        if null_percentage <= threshold:
+          cols_to_keep.append(col_name)
+        else:
+          cols_dropped.append(f"{col_name} ({null_percentage:.2f}%)")
+  else:
+    logging.warning("DataFrame vazio após transformações, mantendo todas as colunas.")
+    return df_transformed_lazy.columns 
+
+  if cols_dropped:
+    logging.warning(f"Removendo {len(cols_dropped)} colunas com nulidade > {threshold}%: {', '.join(cols_dropped)}")
+  logging.info(f"Mantendo {len(cols_to_keep)} colunas no dataset final.")
+  
+  return cols_to_keep
 
 def load(df_final_lazy: pl.LazyFrame, db_path: str, db_dir: str):
   """
@@ -102,7 +144,6 @@ def test_database(db_path: str):
     con.close()
   except Exception as e:
     logging.error(f"Erro ao testar o banco de dados: {e}")
-
 
 def main():
   """
