@@ -50,6 +50,19 @@ Juntos, eles se comunicam via **Apache Arrow** (`pyarrow`), permitindo transfer�
     ```
     E então rode suas consultas.
 
+## 🧪 Testando a Qualidade e as Consultas
+
+Para garantir a robustez e facilitar a validação, o projeto inclui:
+
+1.  **Teste Pós-ETL:** A execução do `python etl_pipeline.py` inclui uma etapa final (`test_database()`) que verifica se a tabela `srag` foi criada com sucesso no banco `data/srag.duckdb`.
+
+2.  **Script de Execução de Consultas:** Como alternativa à CLI do DuckDB, você pode executar as consultas SQL analíticas (`sql/*.sql`) diretamente através de um script Python dedicado:
+
+    ```bash
+    python test_queries.py
+    ```
+    Este script se conectará ao banco `data/srag.duckdb` (que deve ter sido criado pelo `etl_pipeline.py` primeiro) e imprimirá os resultados das consultas encontradas na pasta `/sql/`. Isso garante que as consultas possam ser validadas independentemente da configuração do ambiente do avaliador.
+    
 ---
 
 ## 📋 Relatório do Desafio

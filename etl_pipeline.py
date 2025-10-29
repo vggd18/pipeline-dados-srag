@@ -90,6 +90,19 @@ def load(df_final_lazy: pl.LazyFrame, db_path: str, db_dir: str):
 
   logging.info("Carregamento concluído!")
 
+def test_database(db_path: str):
+  """
+  Executa um teste simples para saber se a tabela foi carregada.
+  """
+  logging.info("Testando a tabela recém criada...")
+  try:
+    con = duckdb.connect(database=db_path)
+    count = con.execute("SELECT COUNT(*) FROM srag").fetchone()[0]
+    logging.info(f"Teste OK. Tabela 'srag' encontrada com {count} linhas.")
+    con.close()
+  except Exception as e:
+    logging.error(f"Erro ao testar o banco de dados: {e}")
+
 
 def main():
   """
@@ -98,11 +111,14 @@ def main():
   logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
   
   logging.info("Pipeline ETL iniciado.")
-
-  df_lazy = extract(URL_PATH)
-  df_final_lazy = transform(df_lazy)
-  load(df_final_lazy, DB_PATH, DB_DIR)
-  logging.info("Pipeline ETL concluído com sucesso.")
+  try:
+    df_lazy = extract(URL_PATH)
+    df_final_lazy = transform(df_lazy)
+    load(df_final_lazy, DB_PATH, DB_DIR)
+    test_database(DB_PATH)
+    logging.info("Pipeline ETL concluído com sucesso.")
+  except Exception as e:
+    logging.critical(f"Pipeline falhou. Erro: {e}", exc_info=True)
 
 if __name__ == "__main__":
   main()
