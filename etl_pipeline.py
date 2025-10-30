@@ -3,16 +3,11 @@ import polars.selectors as cs
 import duckdb
 import os
 import logging
-from dotenv import load_dotenv
-import logging
 import time
 from functools import wraps
+from config import URL_PATH, DB_DIR, DB_PATH, LOG_LEVEL, LOG_FORMAT, validate_config
 
-load_dotenv()
-
-URL_PATH = os.getenv("SOURCE_URL")
-DB_DIR = os.getenv("OUTPUT_DIR")
-DB_PATH = os.getenv("DB_PATH")
+validate_config()
 
 def log_step(step_name: str):
     """Decorator para logar início, fim e duração de cada etapa."""
@@ -260,7 +255,7 @@ def main():
   """
   Orquestrador do Pipeline de Extração, Tratamento e Carregamento (ETL)
   """
-  logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+  logging.basicConfig(level=LOG_LEVEL, format=LOG_FORMAT)
   
   logging.info("PIPELINE ETL SRAG INICIADO")
   logging.info(f"   Fonte: {URL_PATH}")

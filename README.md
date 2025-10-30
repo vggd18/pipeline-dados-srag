@@ -82,7 +82,10 @@ Esta seção cumpre o requisito de "breve relatório" do processo seletivo.
 
 ### 2. Pipeline (Extração e Transformação)
 
+
 O pipeline foi construído seguindo boas práticas de engenharia, com foco em **Modularidade**, **Observabilidade** e **Eficiência de Memória** (Lazy Mode).
+
+* **Configuração Externa:** Todas as constantes (URLs, caminhos, logs) são gerenciadas em um arquivo `config.py` e carregadas via `.env` (usando `python-dotenv`). Isso permite fácil reconfiguração sem alterar o código do pipeline e segue a boa prática de separar configuração de código.
 
 * **Observabilidade:** Um decorator `@log_step` foi implementado para registrar o início, fim e **duração (em segundos)** de cada etapa principal. Logs detalhados (ex: contagem de registros e colunas, tamanho do banco) são registrados durante a execução para permitir o rastreamento do progresso e resultados.
 
