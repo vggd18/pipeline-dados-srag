@@ -52,16 +52,36 @@ Juntos, eles se comunicam via **Apache Arrow** (`pyarrow`), permitindo transfer�
 
 ## 🧪 Testando a Qualidade e as Consultas
 
-Para garantir a robustez e facilitar a validação, o projeto inclui:
+Após a execução do pipeline (`python etl_pipeline.py`), você pode validar o projeto de duas formas principais:
 
-1.  **Teste Pós-ETL:** A execução do `python etl_pipeline.py` inclui uma etapa final (`test_database()`) que verifica se a tabela `srag` foi criada com sucesso e loga a contagem de linhas e colunas carregadas.
+### 1. Testes de Qualidade de Dados (com `pytest`)
 
-2.  **Script de Execução de Consultas:** Para validar as consultas SQL analíticas, você pode usar o script dedicado:
+Para abordar formalmente a crítica sobre a falta de testes de dados, foi implementado um conjunto de testes automatizados usando `pytest`. Estes testes validam a integridade e a lógica de negócio dos dados carregados na tabela `srag`.
 
-    ```bash
-    python test_queries.py
-    ```
-    Este script se conectará ao banco `data/srag.duckdb` (criado pelo ETL) e imprimirá os resultados das consultas encontradas na pasta `/sql/`.
+**Execute os testes:**
+No terminal, na raiz do projeto, rode:
+```bash
+pytest -v
+````
+
+*(O `-v` é para modo "verbose", mostrando o nome de cada teste que passou)*
+
+Estes testes (`tests/test_data_quality.py`) garantem que:
+
+  * A chave primária (`nu_notific`) é 100% única.
+  * A chave primária (`nu_notific`) não contém nulos.
+  * O filtro de negócio (`hospital = True`) foi aplicado corretamente e não há registros inválidos.
+  * Colunas categóricas mapeadas (como `evolucao` e `classi_fin`) contêm apenas os valores válidos esperados.
+
+### 2\. Execução das Consultas Analíticas
+
+Para executar as duas consultas SQL solicitadas no desafio e ver seus resultados, use o script dedicado:
+
+```bash
+python test_queries.py
+```
+
+Este script se conectará ao banco `data/srag.duckdb` e imprimirá os resultados de `sql/consulta_1.sql` e `sql/consulta_2.sql` diretamente no console.
 
 ---
 

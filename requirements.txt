@@ -3,3 +3,4 @@ duckdb
 s3fs
 pyarrow
 python-dotenv
+pytest
