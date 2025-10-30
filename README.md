@@ -1,12 +1,12 @@
 # Desafio de Engenharia de Dados - GGMA (Sec. Saúde Recife)
 
-Este repositório contém a minha solução para o desafio de Engenharia de Dados Júnior da Secretaria de Saúde do Recife. O projeto consiste em um pipeline ETL (Extract, Transform, Load) completo, construído para ser robusto, eficiente e escalável.
+Este repositório contém a minha solução para o desafio de Engenharia de Dados Júnior da Secretaria de Saúde do Recife. O projeto consiste em um pipeline ETL (Extract, Transform, Load) completo, construído para ser robusto, eficiente, escalável e observável.
 
-O pipeline extrai dados de Síndrome Respiratória Aguda Grave (SRAG) do OpenDataSUS, aplica um rigoroso processo de transformação e limpeza, e os carrega em um banco de dados analítico local, pronto para as consultas SQL solicitadas.
+O pipeline extrai dados de Síndrome Respiratória Aguda Grave (SRAG) do OpenDataSUS, aplica um rigoroso processo de transformação modularizado e os carrega em um banco de dados analítico local, pronto para as consultas SQL solicitadas.
 
 ## 🚀 Justificativa da Stack de Tecnologias
 
-A escolha da stack foi um pilar central deste projeto, alinhada à filosofia do desafio de priorizar "qualidade ao invés de complexidade" . A stack escolhida foi **Polars + DuckDB**.
+A escolha da stack foi um pilar central deste projeto, alinhada à filosofia do desafio de priorizar "qualidade ao invés de complexidade". A stack escolhida foi **Polars + DuckDB**.
 
 ### Por que Polars + DuckDB?
 
@@ -42,40 +42,32 @@ Juntos, eles se comunicam via **Apache Arrow** (`pyarrow`), permitindo transfer�
     ```bash
     cp .env.example .env
     ```
-    *(Os valores padrão no `.env` devem funcionar para este desafio, mas você pode editá-los se necessário).*
+    *(Os valores padrão no `.env` devem funcionar para este desafio).*
 
 4.  Execute o pipeline ETL completo:
     ```bash
     python etl_pipeline.py
     ```
-    O script irá (1) baixar os dados, (2) processá-los em modo *Lazy* e (3) carregar o resultado no arquivo `data/srag.duckdb`.
-
-5.  (Opcional) Verifique o banco de dados via CLI:
-    ```bash
-    duckdb data/srag.duckdb
-    ```
-    E então rode suas consultas.
+    O script irá (1) baixar os dados, (2) processá-los em modo *Lazy* e (3) carregar o resultado no arquivo `data/srag.duckdb`. A saída no terminal mostrará os logs de cada etapa e suas durações.
 
 ## 🧪 Testando a Qualidade e as Consultas
 
 Para garantir a robustez e facilitar a validação, o projeto inclui:
 
-1.  **Teste Pós-ETL:** A execução do `python etl_pipeline.py` inclui uma etapa final (`test_database()`) que verifica se a tabela `srag` foi criada com sucesso no banco `data/srag.duckdb`.
+1.  **Teste Pós-ETL:** A execução do `python etl_pipeline.py` inclui uma etapa final (`test_database()`) que verifica se a tabela `srag` foi criada com sucesso e loga a contagem de linhas e colunas carregadas.
 
-2.  **Script de Execução de Consultas:** Como alternativa à CLI do DuckDB, você pode executar as consultas SQL analíticas (`sql/*.sql`) diretamente através de um script Python dedicado:
+2.  **Script de Execução de Consultas:** Para validar as consultas SQL analíticas, você pode usar o script dedicado:
 
     ```bash
     python test_queries.py
     ```
-    Este script se conectará ao banco `data/srag.duckdb` (que deve ter sido criado pelo `etl_pipeline.py` primeiro) e imprimirá os resultados das consultas encontradas na pasta `/sql/`. Isso garante que as consultas possam ser validadas independentemente da configuração do ambiente do avaliador.
-    
+    Este script se conectará ao banco `data/srag.duckdb` (criado pelo ETL) e imprimirá os resultados das consultas encontradas na pasta `/sql/`.
+
 ---
 
 ## 📋 Relatório do Desafio
 
 Esta seção cumpre o requisito de "breve relatório" do processo seletivo.
-
-**Nota sobre a Implementação:** O pipeline foi implementado seguindo boas práticas de engenharia, como a separação de responsabilidades em funções (`extract`, `transform`, `load`), o uso do módulo `logging` para rastreabilidade e a otimização de memória através do "Lazy Mode" do Polars.
 
 ### 1. Dados
 
@@ -90,24 +82,23 @@ Esta seção cumpre o requisito de "breve relatório" do processo seletivo.
 
 ### 2. Pipeline (Extração e Transformação)
 
-O pipeline foi construído usando o **"Lazy Mode"** (modo preguiçoso) do Polars para garantir o mínimo uso de memória (resolvendo o erro de `killed` por OOM) e máxima performance. Nenhuma etapa é executada até o `con.register()` final.
+O pipeline foi construído seguindo boas práticas de engenharia, com foco em **Modularidade**, **Observabilidade** e **Eficiência de Memória** (Lazy Mode).
 
-* **Extração (E):** A extração é feita com `pl.scan_parquet(URL_PATH)`. Isso apenas "escaneia" o esquema do arquivo no S3 (usando `s3fs`) sem carregá-lo na memória.
+* **Observabilidade:** Um decorator `@log_step` foi implementado para registrar o início, fim e **duração (em segundos)** de cada etapa principal. Logs detalhados (ex: contagem de registros e colunas, tamanho do banco) são registrados durante a execução para permitir o rastreamento do progresso e resultados.
 
-* **Transformação (T):** Todas as transformações são encadeadas em um único plano de execução "Lazy":
-    1.  **Renomeação:** Todas as 194 colunas foram convertidas para `snake_case` (minúsculas) para padronização SQL.
-    2.  **Tipagem Robusta:** As colunas foram convertidas para seus tipos corretos (ex: `Date`, `Int32`) usando `strict=False`. Isso garante que dados sujos (ex: uma data mal formatada) sejam convertidos para `NULL` em vez de quebrar o pipeline.
-    3.  **Mapeamento Semântico (Polimento):** Colunas-chave (`cs_sexo`, `evolucao`, `classi_fin`, etc.) foram mapeadas de códigos crípticos (ex: `"1"`, `"2"`, `"9"`) para valores legíveis (ex: `"Cura"`, `"Óbito"`, `None`). Isso é crucial para a usabilidade do analista.
-    4.  **Mapeamento Booleano:** Dezenas de colunas (ex: `diabetes`, `cardiopati`) que usavam o padrão `1/2/9` foram convertidas para `True/False/None`, permitindo análises SQL complexas (como a Consulta 2).
-    5.  **Sanitização:** Todas as colunas `String` restantes (como `co_mun_res`) foram sanitizadas (`.str.strip_chars().str.to_lowercase()`) para padronizar o case e remover espaços.
-    6.  **Deduplicação:** Os registros foram deduplicados pela chave primária `nu_notific`.
-    7.  **Filtragem de Integridade:** O dataset foi filtrado para `hospital = True`, alinhando os dados com a definição oficial de "casos hospitalizados".
-    8.  **Filtragem de Colunas por Nulidade (com Trade-off):** Como etapa final da transformação, foi implementada uma lógica para remover colunas com mais de 70% de valores nulos. No entanto, foi feito um **trade-off estratégico**: colunas consideradas de alta importância analítica (especificamente `puerpera`, `hematologi`, `sind_down`, `hepatica`, `renal`, `obesidade`), mesmo que acima do threshold de 70%, foram **explicitamente mantidas** no dataset final. Essa decisão prioriza a retenção de informações potencialmente valiosas para a análise de comorbidades, balanceando a limpeza de dados com as necessidades do negócio.
+* **Extração (E):** A função `extract()` usa `pl.scan_parquet()` para escanear o arquivo do S3 sem carregá-lo na memória, apenas lendo o esquema.
 
-* **Carregamento (L):** O carregamento no DuckDB é feito de forma nativa e otimizada:
-    1.  O plano "Lazy" do Polars (`df_final_lazy`) é "registrado" no DuckDB (`con.register()`).
-    2.  Esta operação é *zero-copy* (via `pyarrow`), "emprestando" os dados na memória sem copiá-los.
-    3.  O DuckDB executa o plano e realiza a carga em massa com `CREATE OR REPLACE TABLE srag AS SELECT ...`, o que é ordens de magnitude mais rápido do que métodos de inserção tradicionais.
+* **Transformação (T):** Esta é a etapa central e foi modularizada em uma sequência de funções atômicas que operam no `LazyFrame` (plano de execução):
+    1.  **`rename_columns()`**: Padroniza todas as colunas para `snake_case` minúsculo.
+    2.  **`convert_data_types()`**: Converte colunas de data (`str` -> `Date`), aplica tipagem booleana (`1/2/9` -> `True/False/None`) e converte colunas de alta cardinalidade para `Categorical`.
+    3.  **`map_categorical_codes()`**: Realiza o polimento semântico, mapeando códigos crípticos (ex: `classi_fin = '5'`) para labels legíveis (ex: `"SRAG por covid-19"`).
+    4.  **`clean_and_deduplicate()`**: Aplica a lógica de negócio central: deduplica pela chave primária (`nu_notific`), sanitiza colunas string (`strip/lowercase`) e filtra o dataset para manter apenas casos válidos (`hospital = True`).
+    5.  **`get_valid_columns()`**: Como etapa final de qualidade, esta função remove colunas com nulidade > 70%, mas aplica um **trade-off** estratégico para manter colunas de comorbidade (ex: `renal`, `obesidade`) que são analiticamente importantes, mesmo que esparsas.
+
+* **Carregamento (L):** O carregamento no banco SQL DuckDB é feito de forma nativa e otimizada:
+    1.  Uma conexão direta com o banco (`duckdb.connect()`) é aberta.
+    2.  O plano "Lazy" final do Polars (`df_final`) é "registrado" (`con.register()`) no DuckDB, usando Apache Arrow para uma transferência *zero-copy*.
+    3.  O DuckDB executa o plano completo e realiza a carga em massa com `CREATE OR REPLACE TABLE srag AS SELECT ...`.
 
 ### 3. Consultas SQL
 
