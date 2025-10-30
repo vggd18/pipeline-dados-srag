@@ -78,7 +78,7 @@ Estes testes (`tests/test_data_quality.py`) garantem que:
 Para executar as duas consultas SQL solicitadas no desafio e ver seus resultados, use o script dedicado:
 
 ```bash
-python test_queries.py
+python test_query.py
 ```
 
 Este script se conectará ao banco `data/srag.duckdb` e imprimirá os resultados de `sql/consulta_1.sql` e `sql/consulta_2.sql` diretamente no console.
